@@ -16,56 +16,54 @@ Finetuning
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Yl1oVem3Pw0o1ZlukR2Fg9dGyqRFeu1z?usp=sharing)
 ONNX conversion and speed testing
 
-# Usage
+## Usage
 Install rucliptiny module and requirements first. Use this trick
 ```python3
 !gdown -O ru-clip-tiny.pkl https://drive.google.com/uc?id=1-3g3J90pZmHo9jbBzsEmr7ei5zm3VXOL
 !pip install git+https://github.com/cene555/ru-clip-tiny.git
 ```
 ## Example in 3 steps
-0. Download CLIP image from repo
+Download CLIP image from repo
 ```python3
 !wget -c -O CLIP.png https://github.com/openai/CLIP/blob/main/CLIP.png?raw=true
 ```
 0. Import libraries
 ```python3
-import torch
-from torchvision import transforms
-import transformers
-from rucliptiny import RuCLIPtiny
 from rucliptiny.predictor import Predictor
-from PIL import Image
-from rucliptiny.utils import get_transform
-from rucliptiny.tokenizer import Tokenizer
+from rucliptiny import RuCLIPtiny
+import torch
 
 torch.manual_seed(1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ```
-2. Load model, transforms, tokenizer
+2. Load model
 ```python3
 model = RuCLIPtiny()
-model.load_state_dict(torch.load('/content/ru-clip-tiny.pkl', map_location=device))
+model.load_state_dict(torch.load('ru-clip-tiny.pkl'))
 model = model.to(device).eval()
-for x in model.parameters(): x.requires_grad = False
-torch.cuda.empty_cache()
-
-transforms, tokenizer = get_transform(), Tokenizer()
 ```
-3. Preprocess image and texts
+3. Use predictor to get probabilities
 ```python3
-# batch first
-image = transforms(Image.open("CLIP.png")).unsqueeze(0).to(device) # [1, 3, 224, 224]
+predictor = Predictor()
 
-# batch first
-texts = ['диаграмма', 'собака', 'кошка']
-input_ids, attention_mask = tokenizer.tokenize(texts, max_len=77)
-input_ids, attention_mask = text_tokens.to(device), attention_mask.to(device) # [3, 77]
+classes = ['диаграмма', 'собака', 'кошка']
+text_probs = predictor(model=model, images_path=["CLIP.png"],
+                       classes=classes, get_probs=True,
+                       max_len=77, device=device)
 ```
-4. Simple inference
-```python3
-image_features = self.encode_image(image)
-text_features = self.encode_text(input_ids, attention_mask)
 
-logits_per_image, logits_per_text = model(image, input_ids, attention_mask)
-probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-```
+## Cosine similarity Visualization Example
+
+
+
+## Speed Tesing
+
+NVIDIA Tesla K80 (Google Colab session)
+
+| TORCH      |   batch |   encode_image |   encode_text |   total |
+|:-----------|--------:|---------------:|--------------:|--------:|
+| RuCLIPtiny |       2 |          0.011 |         0.004 |   0.015 |
+| RuCLIPtiny |       8 |          0.011 |         0.004 |   0.015 |
+| RuCLIPtiny |      16 |          0.012 |         0.005 |   0.017 |
+| RuCLIPtiny |      32 |          0.014 |         0.005 |   0.019 |
+| RuCLIPtiny |      64 |          0.013 |         0.006 |   0.019 |
